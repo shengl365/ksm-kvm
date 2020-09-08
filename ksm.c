@@ -258,7 +258,7 @@ static struct mm_slot ksm_mm_head = {
 /* HZ */
 static LIST_HEAD(hot_zone_rmap);
 static LIST_HEAD(remaining_rmap);
-static int hot_table[1048576] = {0};
+static int hot_table[4194304] = {0};
 
 static struct ksm_scan ksm_scan = {
 	.mm_slot = &ksm_mm_head,
@@ -2267,7 +2267,7 @@ static void hotzone_show(void)
 
 	printk("Start dumping hotzone information:\n");
 	list_for_each_entry(rmap_item, &hot_zone_rmap, link) {
-		printk("VM#%lu, GFN = %lu, count =%d\n", rmap_item->number, rmap_item->gfn, hot_table[rmap_item->gfn]);
+		printk("GFN = %lu, count =%d\n", rmap_item->gfn, hot_table[rmap_item->gfn]);
 	}
 	printk("=========Finish dumping hotzone information.=========\n");
 }
@@ -2301,11 +2301,13 @@ static void list_insert(struct rmap_item *rmap)
 		list_add(&rmap->link, &hot_zone_rmap);
 		len1++;
 	}
-	
+/*	
 	else if(ksm_scan.seqnr == 0 && intable(rmap->gfn) == 0) {
 		list_add(&rmap->link, &remaining_rmap);
 		len2++;
+
 	}
+*/
 }
 
 static struct rmap_item *scan_get_next_rmap_item(struct page **page)
@@ -2509,13 +2511,13 @@ static void hot_zone_scan(unsigned int scan_npages)
 				scan_remain = 1;	
 			cursor = NULL;
 		}
-
+/*
 		if(list_is_last(&rmap_item->link, &remaining_rmap))
 		{
 			remaining_show();	
 			cursor = NULL;
 		}
-
+*/
 		if((rmap_item->address & PAGE_MASK) == rmap_item->oaddress) {
 			/* printk("same as oaddress"); */
 		}
@@ -2596,13 +2598,12 @@ static void ksm_do_scan(unsigned int scan_npages)
 			hot_zone_scan(scan_npages);
 			break;
 		}
-
+/*
 		if(scan_remain && ksm_scan.seqnr != 0) {
-			/* printk("remain zone scan"); */
 			remain_zone_scan(scan_npages);
 			break;
 		}
-
+*/
 		rmap_item = scan_get_next_rmap_item(&page);
 		if (!rmap_item)
 			return;
