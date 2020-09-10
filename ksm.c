@@ -2600,11 +2600,13 @@ static void ksm_do_scan(unsigned int scan_npages)
 	while (scan_npages-- && likely(!freezing(current))) {
 		cond_resched();
 		/* hz ksm */
+
+/*
 		if(scan_hot_zone && ksm_scan.seqnr != 0) {
 			hot_zone_scan(scan_npages);
 			break;
 		}
-/*
+
 		if(scan_remain && ksm_scan.seqnr != 0) {
 			remain_zone_scan(scan_npages);
 			break;
