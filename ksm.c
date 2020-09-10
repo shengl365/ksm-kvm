@@ -2070,6 +2070,31 @@ static void stable_tree_append(struct rmap_item *rmap_item,
 		ksm_pages_shared++;
 }
 
+
+
+static void list_insert(struct rmap_item *rmap)
+{
+        unsigned long hva;
+
+        INIT_LIST_HEAD(&rmap->link);
+        hva = rmap->address >> 12;              /* >> 12 so it's basically a page number */
+        rmap->gfn = kvm_hva_to_gfn(hva);
+        rmap->number = kvm_hva_vmnumber(hva);
+
+        hot_table[rmap->gfn]++; /* accumulation of virtual #page used */
+
+        if(ksm_scan.seqnr == 0) { // && intable(rmap->gfn)
+                list_add(&rmap->link, &hot_zone_rmap);
+                len1++;
+        }
+/*
+        else if(ksm_scan.seqnr == 0 && intable(rmap->gfn) == 0) {
+                list_add(&rmap->link, &remaining_rmap);
+                len2++;
+
+        }
+*/
+}
 /*
  * cmp_and_merge_page - first see if page can be merged into the stable tree;
  * if not, compare checksum to previous and if it's the same, see if page can
@@ -2120,6 +2145,7 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 	remove_rmap_item_from_tree(rmap_item);
 
 	if (kpage) {
+		list_insert(rmap_item);
 		if (PTR_ERR(kpage) == -EBUSY)
 			return;
 
@@ -2172,6 +2198,7 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 	tree_rmap_item =
 		unstable_tree_search_insert(rmap_item, page, &tree_page);
 	if (tree_rmap_item) {
+		list_insert(rmap_item);
 		bool split;
 
 		kpage = try_to_merge_two_pages(rmap_item, page,
@@ -2261,13 +2288,13 @@ static struct rmap_item *get_next_rmap_item(struct mm_slot *mm_slot,
 }
 
 /* HZ */
-static void hotzone_show(void)
+static void hotzone_show(unsigned long seqnr)
 {
 	struct rmap_item *rmap_item;
 
 	printk("Start dumping hotzone information:\n");
 	list_for_each_entry(rmap_item, &hot_zone_rmap, link) {
-		printk("GFN = %lu, count =%d\n", rmap_item->gfn, hot_table[rmap_item->gfn]);
+		printk("GFN = %lu, count =%d seqnr %d\n", rmap_item->gfn, hot_table[rmap_item->gfn], seqnr);
 	}
 	printk("=========Finish dumping hotzone information.=========\n");
 }
@@ -2286,29 +2313,6 @@ static void remaining_show(void)
 }
 
 
-static void list_insert(struct rmap_item *rmap)
-{
-	unsigned long hva;
-
-	INIT_LIST_HEAD(&rmap->link);
-	hva = rmap->address >> 12;		/* >> 12 so it's basically a page number */
-	rmap->gfn = kvm_hva_to_gfn(hva);
-	rmap->number = kvm_hva_vmnumber(hva);
-
-	hot_table[rmap->gfn]++;	/* accumulation of virtual #page used */
-
-	if(ksm_scan.seqnr == 0) { // && intable(rmap->gfn)
-		list_add(&rmap->link, &hot_zone_rmap);
-		len1++;
-	}
-/*	
-	else if(ksm_scan.seqnr == 0 && intable(rmap->gfn) == 0) {
-		list_add(&rmap->link, &remaining_rmap);
-		len2++;
-
-	}
-*/
-}
 
 static struct rmap_item *scan_get_next_rmap_item(struct page **page)
 {
@@ -2469,7 +2473,9 @@ next_mm:
 	ksm_scan.seqnr++;
 	if(ksm_scan.seqnr >= 1) {
 		root_unstable_tree[0] = RB_ROOT;
+		//HZ
 		scan_hot_zone = 1;
+		hotzone_show(ksm_scan.seqnr);
 	}
 	return NULL;
 }
@@ -2502,7 +2508,7 @@ static void hot_zone_scan(unsigned int scan_npages)
 			cursor = rmap_item;
 			break;
 		}
-
+/*
 		if(list_is_last(&rmap_item->link, &hot_zone_rmap))
 		{
 			hotzone_show();
@@ -2511,7 +2517,7 @@ static void hot_zone_scan(unsigned int scan_npages)
 				scan_remain = 1;	
 			cursor = NULL;
 		}
-/*
+
 		if(list_is_last(&rmap_item->link, &remaining_rmap))
 		{
 			remaining_show();	
