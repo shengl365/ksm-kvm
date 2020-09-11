@@ -2083,10 +2083,10 @@ static void list_insert(struct rmap_item *rmap)
 
         hot_table[rmap->gfn]++; /* accumulation of virtual #page used */
 
-        if(ksm_scan.seqnr == 0) { // && intable(rmap->gfn)
+//        if(ksm_scan.seqnr == 0 && intable(rmap->gfn) {
                 list_add(&rmap->link, &hot_zone_rmap);
                 len1++;
-        }
+//        }
 /*
         else if(ksm_scan.seqnr == 0 && intable(rmap->gfn) == 0) {
                 list_add(&rmap->link, &remaining_rmap);
@@ -2107,7 +2107,7 @@ static void list_insert(struct rmap_item *rmap)
 static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 {
 	struct mm_struct *mm = rmap_item->mm;
-	struct rmap_item *tree_rmap_item;
+	struct rmap_item *tree_rmap_item, *hz_rmap_item = rmap_item;
 	struct page *tree_page = NULL;
 	struct stable_node *stable_node;
 	struct page *kpage;
@@ -2145,7 +2145,7 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 	remove_rmap_item_from_tree(rmap_item);
 
 	if (kpage) {
-		list_insert(rmap_item);
+		list_insert(hz_rmap_item);
 		if (PTR_ERR(kpage) == -EBUSY)
 			return;
 
@@ -2198,7 +2198,7 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 	tree_rmap_item =
 		unstable_tree_search_insert(rmap_item, page, &tree_page);
 	if (tree_rmap_item) {
-		list_insert(rmap_item);
+		list_insert(hz_rmap_item);
 		bool split;
 
 		kpage = try_to_merge_two_pages(rmap_item, page,
@@ -2617,9 +2617,11 @@ static void ksm_do_scan(unsigned int scan_npages)
 			return;
 
 		/* store gfn, #vm in each rmap_item at first round */
+
+/*
 		if(ksm_scan.seqnr == 0)
 			list_insert(rmap_item);
-
+*/
 		cmp_and_merge_page(page, rmap_item);
 		put_page(page);
 	}
