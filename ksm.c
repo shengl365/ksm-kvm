@@ -2145,12 +2145,13 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 	remove_rmap_item_from_tree(rmap_item);
 
 	if (kpage) {
-		list_insert(hz_rmap_item);
 		if (PTR_ERR(kpage) == -EBUSY)
 			return;
 
 		err = try_to_merge_with_ksm_page(rmap_item, page, kpage);
 		if (!err) {
+			hot_table[hz_rmap_item->gfn]++;
+			printk("Stable GFN= %lu count= %d seqnr= %ld\n", hz_rmap_item->gfn, hot_table[hz_rmap_item->gfn], ksm_scan.seqnr);
 			/*
 			 * The page was successfully merged:
 			 * add its rmap_item to the stable tree.
@@ -2198,7 +2199,6 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 	tree_rmap_item =
 		unstable_tree_search_insert(rmap_item, page, &tree_page);
 	if (tree_rmap_item) {
-		list_insert(hz_rmap_item);
 		bool split;
 
 		kpage = try_to_merge_two_pages(rmap_item, page,
@@ -2217,6 +2217,11 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 			&& compound_head(page) == compound_head(tree_page);
 		put_page(tree_page);
 		if (kpage) {
+                        hot_table[hz_rmap_item->gfn]++;
+                        printk("Rmap GFN= %lu count= %d seqnr= %ld\n", hz_rmap_item->gfn, hot_table[hz_rmap_item->gfn], ksm_scan.seqnr);
+                        hot_table[hz_rmap_item->gfn]++;
+                        printk("Unstable GFN= %lu count= %d seqnr= %ld\n", tree_rmap_item->gfn, hot_table[tree_rmap_item->gfn], ksm_scan.seqnr);
+
 			/*
 			 * The pages were successfully merged: insert new
 			 * node in the stable tree and add both rmap_items.
@@ -2618,10 +2623,11 @@ static void ksm_do_scan(unsigned int scan_npages)
 
 		/* store gfn, #vm in each rmap_item at first round */
 
-/*
+
 		if(ksm_scan.seqnr == 0)
-			list_insert(rmap_item);
-*/
+			rmap_item->gfn = kvm_hva_to_gfn(rmap_item->address >> 12);
+//			list_insert(rmap_item);
+
 		cmp_and_merge_page(page, rmap_item);
 		put_page(page);
 	}
