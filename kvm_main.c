@@ -736,21 +736,26 @@ static unsigned long get_gfn(struct kvm_memslots *slots, unsigned long hva)
 	return gfn;
 }
 
-unsigned long kvm_hva_to_gfn(unsigned long hva)
+unsigned long kvm_hva_to_gfn(unsigned long hva, int *number)
 {
 	struct kvm *kvm_list;
 	unsigned long gfn = 0;
-	int i = 0;
+	int i = 0, kvm_number, correct = 0;
         
 	list_for_each_entry(kvm_list, &vm_list, vm_list) {
 		
+		kvm_number = numbervm - correct;
+
 		for(i = 0; i < KVM_ADDRESS_SPACE_NUM; i++) {
 			gfn = get_gfn(kvm_list->memslots[i], hva);
 			if(gfn != 0)
-			{ 
+			{
+			       *number = kvm_number;	
 				return gfn;
 			}
 		}
+	
+	correct++;
 	}
 	
 	return gfn;

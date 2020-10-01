@@ -197,7 +197,7 @@ struct rmap_item {
 	struct rmap_item *rmap_list;
 
 	unsigned long gfn;
-	unsigned long number;
+	int number;
 
 	union {
 		struct anon_vma *anon_vma;	/* when stable */
@@ -2078,7 +2078,7 @@ static void list_insert(struct rmap_item *rmap)
 
         INIT_LIST_HEAD(&rmap->link);
         hva = rmap->address >> 12;              /* >> 12 so it's basically a page number */
-        rmap->gfn = kvm_hva_to_gfn(hva);
+        rmap->gfn = kvm_hva_to_gfn(hva, &rmap->number);
         rmap->number = kvm_hva_vmnumber(hva);
 
         hot_table[rmap->gfn]++; /* accumulation of virtual #page used */
@@ -2151,7 +2151,7 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 		err = try_to_merge_with_ksm_page(rmap_item, page, kpage);
 		if (!err) {
 			hot_table[hz_rmap_item->gfn]++;
-			printk("Stable GFN= %lu count= %d seqnr= %ld checksum= %lu\n", hz_rmap_item->gfn, hot_table[hz_rmap_item->gfn], ksm_scan.seqnr, hz_rmap_item->oldchecksum);
+			printk("Stable GFN= %lu #VM= %d seqnr= %ld checksum= %lu\n", hz_rmap_item->gfn, hz_rmap_item->number, ksm_scan.seqnr, hz_rmap_item->oldchecksum);
 			/*
 			 * The page was successfully merged:
 			 * add its rmap_item to the stable tree.
@@ -2218,9 +2218,9 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 		put_page(tree_page);
 		if (kpage) {
                         hot_table[hz_rmap_item->gfn]++;
-                        printk("Rmap GFN= %lu count= %d seqnr= %ld checksum= %lu\n", hz_rmap_item->gfn, hot_table[hz_rmap_item->gfn], ksm_scan.seqnr, hz_rmap_item->oldchecksum);
+                        printk("Rmap GFN= %lu #VM= %d seqnr= %ld checksum= %lu\n", hz_rmap_item->gfn, hz_rmap_item->number, ksm_scan.seqnr, hz_rmap_item->oldchecksum);
                         hot_table[tree_rmap_item->gfn]++;
-                        printk("Unstable GFN= %lu count= %d seqnr= %ld checksum= %lu\n", tree_rmap_item->gfn, hot_table[tree_rmap_item->gfn], ksm_scan.seqnr, tree_rmap_item->oldchecksum);
+                        printk("Unstable GFN= %lu #VM= %d seqnr= %ld checksum= %lu\n", tree_rmap_item->gfn, tree_rmap_item->number, ksm_scan.seqnr, tree_rmap_item->oldchecksum);
 
 			/*
 			 * The pages were successfully merged: insert new
@@ -2624,10 +2624,11 @@ static void ksm_do_scan(unsigned int scan_npages)
 		/* store gfn, #vm in each rmap_item at first round */
 
 
-		if(ksm_scan.seqnr == 0)
-			rmap_item->gfn = kvm_hva_to_gfn(rmap_item->address >> 12);
+		if(ksm_scan.seqnr == 0) {
+			rmap_item->number = 0;
+			rmap_item->gfn = kvm_hva_to_gfn(rmap_item->address >> 12, &rmap_item->number);
 //			list_insert(rmap_item);
-
+		}
 		cmp_and_merge_page(page, rmap_item);
 		put_page(page);
 	}

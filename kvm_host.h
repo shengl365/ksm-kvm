@@ -185,7 +185,7 @@ enum kvm_bus {
 };
 
 /* new ksm */
-unsigned long kvm_hva_to_gfn(unsigned long hva);
+unsigned long kvm_hva_to_gfn(unsigned long hva, int *number);
 unsigned long kvm_hva_vmnumber(unsigned long hva);
 
 int kvm_io_bus_write(struct kvm_vcpu *vcpu, enum kvm_bus bus_idx, gpa_t addr,
