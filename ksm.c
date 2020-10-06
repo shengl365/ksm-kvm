@@ -2518,8 +2518,10 @@ static void hot_zone_scan(unsigned int scan_npages)
 
 	list_for_each_entry_continue(rmap_item, &hot_zone_rmap, link) {
 
+		if(rmap_item->clas != 1)
+			continue;
 
-		if(--number == 0 || rmap_item->clas != 1)
+		if(--number == 0)
 		{
 			/* scan until number==0 or end of list*/
 			cursor = rmap_item;
