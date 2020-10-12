@@ -198,7 +198,6 @@ struct rmap_item {
 
 	unsigned long gfn;
 	int number;
-        char clas;
 
 	union {
 		struct anon_vma *anon_vma;	/* when stable */
@@ -2098,16 +2097,15 @@ static void list_insert(struct rmap_item *rmap_item)
         INIT_LIST_HEAD(&rmap_item->link);
         hva = rmap_item->address >> 12;              /* >> 12 so it's basically a page number */
         rmap_item->gfn = kvm_hva_to_gfn(hva, &rmap_item->number);
-        list_add(&rmap_item->link, &hot_zone_rmap);
 
-        if(ksm_scan.seqnr == 0 && intable(rmap_item->gfn/2048)) {
-                rmap_item->clas = 1;
-        }
+        if(rmap_item->number && intable(rmap_item->gfn/2048)) {
+      		list_add(&rmap_item->link, &hot_zone_rmap);
+                len1++;	
+	}
 /*
-        else if(ksm_scan.seqnr == 0 && intable(rmap->gfn) == 0) {
+        else if(ksm_scan.seqnr == 0 && intable(rmap->gfn/2048) == 0) {
                 list_add(&rmap->link, &remaining_rmap);
                 len2++;
-
         }
 */
 }
